@@ -1,44 +1,46 @@
 % MonteCarlo Function
 %       Monte-Carlo Method to solve for Temperature
 %
-%  [TemperatureMC] = MonteCarlo(t, x, const, Temperature_0, Temperature_L)
+%  [TemperatureMC, maxTemp] = MonteCarlo(t, x, const, Temperature_0, Q, nRuns)
 %
 % Input(s):
-%   dt ----------------------------- [s] Discretized Temporal Coordinate
-%   dx ----------------------------- [m] Discretized Spatial Coordinate
 %   t ------------------------------ [s] Temporal Coordinate
 %   x ------------------------------ [m] Spatial Coordinate
-%   alpha -------------------------- [] Diffusive Constant
-%   Temperature_0 ------------------ [K] Value at Node 0
-%   Temperature_L ------------------ [K] Value at Node end
-%   nRuns -------------------------- [#] No. of Monte Carlo Runs
-%   DeltaT ------------------------- [K] Variation in Temperature
-%   DeltaA ------------------------- [] Variation in Diffusivity Constant
+%   dt ----------------------------- [s] Temporal Discretization
+%   dx ----------------------------- [m] Spatial Discretization
+%   k ------------------------------ [W/m-K] Thermal Conductivity
+%   rho ---------------------------- [kg/m^3] Density
+%   cp ----------------------------- [J/kg-K] Heat Capacity
+%   Temperature_0 ------------------ [K] Value at Node 0, at t = 0
+%   Q ------------------------------ [W/m^2] Heat Flux
+%   nRuns -------------------------- [#] Number of MonteCarlo runs
+%   T_crit ------------------------- [K] Critical Temperature
 %
 % Output(s):
-%   TemperatureMC -------------------- [2-D] Temperature
+%   dataTemp ----------------------- [2-D] Point of Interests in Temperature Data
 %
 % Developed By: Saaras Pakanati, The University of Cincinnati, Novemeber 3 2025
 
-function [TemperatureMC] = MonteCarlo(dt, dx, t, x, alpha, Temperature_0, Temperature_L, nRuns, DeltaT, DeltaA)
+function [dataTemp] = MonteCarlo(t, x, dt, dx, k, rho, cp, Temperature_0, Q, nRuns, T_crit)
 
-    % Initial Memory Allocation for Temperature Data.
-    TemperatureMC = zeros(nRuns, length(x));
+    maxTemp = [nan, nan];
 
-    for k = 1:nRuns
-        % Initialize Physical Parameter Values
-        a =  alpha         + DeltaA * randn();
-        T0 = Temperature_0 + DeltaT * randn();
-        TL = Temperature_L + DeltaT * randn();
+    for l = 1:nRuns
+
+        k_temp = normrnd(k, 0.05);
         
-        % Initialize Numerical Parameter Values
-        const = a * dt / dx^2;
-        
-        % FTCS Solve
-        [TemperatureTemp] = FTCS(t, x, const, T0, TL);
+        while k_temp < 0
+            k_temp = normrnd(k, 0.05);
+        end
 
-        % Save Data from Temporary File.
-        TemperatureMC(k,:) = TemperatureTemp(:, end);
+        [TemperatureMC] = BTCS(t, x, dt, dx, k_temp, rho, cp, Temperature_0, Q);
+
+        maxTemp = [maxTemp; [k_temp, max(TemperatureMC(:, end))]];
+
+        disp(l*100/nRuns);
     end
+
+    dataTemp = [maxTemp(:, 1), maxTemp(:, 2)];
+
 
 end
